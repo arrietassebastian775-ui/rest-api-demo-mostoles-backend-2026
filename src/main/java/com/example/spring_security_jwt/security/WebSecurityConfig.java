@@ -2,7 +2,16 @@ package com.example.spring_security_jwt.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 import com.example.spring_security_jwt.security.jwt.AuthEntryPointJwt;
 import com.example.spring_security_jwt.security.jwt.AuthTokenFilter;
@@ -33,6 +42,41 @@ public class WebSecurityConfig {
 	AuthTokenFilter authenticationJwtTokenFilter() {
 		
 		return new AuthTokenFilter(jwtUtils, userDetailsService);
+	}
+
+	DaoAuthenticationProvider autheticationProvider() {
+
+		DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider(userDetailsService);
+
+		authProvider.setPasswordEncoder(passwordEndcoder());
+
+		return authProvider;
+	}
+
+	@Bean 
+	PasswordEncoder passwordEndcoder() {
+
+		return new BCryptPasswordEncoder(); 
+	}
+
+	AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) {
+		return authConfig.getAuthenticationManager();
+	}
+
+	// El bean siguiente es el que hay que saber personalizar para adaptarlo a nuestro proyecto
+	// Todo lo demas es boilerplate, es decir, (codigo repetitivo)
+
+	SecurityFilterChain filterChain(HttpSecurity http) {
+
+		http.csrf(csrf -> csrf.disable())
+			.exceptionHandling(exception -> exception.authenticationEntryPoint(unauthorizeHandle))
+			.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+			.authorizeHttpRequests(auth -> auth.requestMatchers("/api/auth/**").permitAll()
+					.anyRequest().authenticated());
+			http.authenticationProvider(autheticationProvider());
+			http.addFilterBefore(authenticationJwtTokenFilter(), UsernamePasswordAuthenticationFilter.class);
+
+			return http.build();
 	}
 }
 
