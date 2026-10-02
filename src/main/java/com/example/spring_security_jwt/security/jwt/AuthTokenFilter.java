@@ -2,6 +2,10 @@ package com.example.spring_security_jwt.security.jwt;
 
 import java.io.IOException;
 
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -27,11 +31,37 @@ public class AuthTokenFilter extends OncePerRequestFilter {
 			throws ServletException, IOException {
 		
 		try {
+			
 			String jwt = parseJwt(request);
 			
+			if (jwt != null && jwtUtils.validateJwtToken(jwt)) {
+				
+				String username = jwtUtils.getUserNameFromJwtToken(jwt);
+				
+				UserDetails userDetails = userDetailsServiceImpl.loadUserByUsername(username);
+				
+				UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+						userDetails, null, userDetails.getAuthorities());
+				
+				authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+				
+				SecurityContextHolder.getContext().setAuthentication(authentication);
+			}
+			
 		} catch (Exception e) {
-			// TODO: handle exception
+			// Un token invalido no debe impedir el paso de la peticion, se deja
+			// el SecurityContext vacio y sera ExceptionTranslationFilter quien
+			// decida si hay que responder con un 401 o con un 403
+			SecurityContextHolder.clearContext();
 		}
+		
+		/**
+		 * IMPORTANTE: esta linea es obligatoria, sin ella la peticion se queda
+		 * detenida dentro de la cadena de filtros de Spring Security, nunca llega
+		 * al DispatcherServlet, y el contenedor responde con un 200 vacio
+		 */
+		filterChain.doFilter(request, response);
+		
 	}
 
 	@SuppressWarnings("null")
@@ -39,7 +69,7 @@ public class AuthTokenFilter extends OncePerRequestFilter {
 		
 		String headerAuth = request.getHeader("Authorization");
 		
-		if (StringUtils.hasText(headerAuth) && headerAuth.startsWith("Bearer: ")) {
+		if (StringUtils.hasText(headerAuth) && headerAuth.startsWith("Bearer ")) {
 			return headerAuth.substring(7);
 		}
 		
