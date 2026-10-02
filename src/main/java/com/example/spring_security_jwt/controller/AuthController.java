@@ -89,10 +89,10 @@ public class AuthController {
 				
 				strRoles.forEach(role -> {
 			
-					if (role == "admin") {
+					if ("admin".equals(role)) {
 						 Role adminRole = roleRepository.findByName(ERole.ROLE_ADMIN)
 									.orElseThrow(() -> new RuntimeException("Error: Role is not found "));
-							      roles.add(adminRole);
+						 roles.add(adminRole);
 					} else {
 						
 						Role userRole = roleRepository.findByName(ERole.ROLE_USER)
