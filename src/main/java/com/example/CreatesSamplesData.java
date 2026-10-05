@@ -2,10 +2,12 @@ package com.example;
 
 import com.example.dao.PresentationDao;
 import java.math.BigDecimal;
+import java.util.Set;
 
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.example.entities.Presentation;
 import com.example.entities.Product;
@@ -13,7 +15,9 @@ import com.example.services.PresentationService;
 import com.example.services.ProductService;
 import com.example.spring_security_jwt.model.ERole;
 import com.example.spring_security_jwt.model.Role;
+import com.example.spring_security_jwt.model.User;
 import com.example.spring_security_jwt.repository.RoleRepository;
+import com.example.spring_security_jwt.repository.UserRepository;
 
 @Configuration
 public class CreatesSamplesData {
@@ -28,7 +32,9 @@ public class CreatesSamplesData {
 	@Bean
     CommandLineRunner samplesData(ProductService productService,
         PresentationService presentationService,
-        RoleRepository roleRepository) {
+        RoleRepository roleRepository,
+        UserRepository userRepository,
+        PasswordEncoder passwordEncoder) {
             
             
         return args -> {
@@ -131,8 +137,28 @@ public class CreatesSamplesData {
                 .build());
             
             // Agregamos los roles de ADMIN y USER
-            roleRepository.save(Role.builder().name(ERole.ROLE_USER).build());
-            roleRepository.save(Role.builder().name(ERole.ROLE_ADMIN).build());
+            Role userRole = roleRepository.save(Role.builder().name(ERole.ROLE_USER).build());
+            Role adminRole = roleRepository.save(Role.builder().name(ERole.ROLE_ADMIN).build());
+            
+            /**
+             * Agregamos usuarios con los roles creados, para realizar test de integracion a los 
+             * endpoints
+             */
+            
+            userRepository.save(User.builder()
+            		.username("admin1")
+            		.email("admin1@gmail.com")
+            		.roles(Set.of(adminRole))
+            		.password(passwordEncoder.encode("Temp2026$$##"))
+            		.build());
+            
+            userRepository.save(User.builder()
+            		.username("user1")
+            		.email("user1@gmail.com")
+            		.roles(Set.of(userRole))
+            		.password(passwordEncoder.encode("Temp2026$$##"))
+            		.build());
+            
         };
     
     }
